@@ -1,0 +1,2 @@
+/Users/jisangkim/Projects/flutter_mag_sender/android/app/.cxx/Debug/2v5f3d86/x86/CMakeFiles/edit_cache.dir
+/Users/jisangkim/Projects/flutter_mag_sender/android/app/.cxx/Debug/2v5f3d86/x86/CMakeFiles/rebuild_cache.dir
