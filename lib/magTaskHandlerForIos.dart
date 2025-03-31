@@ -37,6 +37,8 @@ class MagTaskHandlerForIos {
 
   int SOUND_SAMPLE_RATE = 44100;
 
+  int OVER_10_MEAN_THRESHOLD = 100;
+
   int MIC_DURATION = 3;
 
   double magDominantFrequency = 0;
@@ -113,6 +115,10 @@ class MagTaskHandlerForIos {
       if (topicName == 'hhi/settings/mag_window_sublist_size') {
         MAG_WINDOW_SUBLIST_SIZE = jMessage['MAG_WINDOW_SUBLIST_SIZE'];
       }
+
+      if (topicName == 'hhi/settings/over_10_mean_threshold') {
+        OVER_10_MEAN_THRESHOLD = jMessage['OVER_10_MEAN_THRESHOLD'];
+      }
     });
 
     List<double> mags = [];
@@ -159,7 +165,8 @@ class MagTaskHandlerForIos {
 
         // validate
         var over10Mean = mags.mean;
-        if (over10Mean < 100) {
+
+        if (over10Mean < OVER_10_MEAN_THRESHOLD) {
           if ((dominantMagnitude - over10Mean) > DOM_MAG_THRESHOLD) {
             if ((19 < magDominantFrequency && magDominantFrequency < 21) ||
                 (39 < magDominantFrequency && magDominantFrequency < 41) ||
@@ -193,6 +200,7 @@ class MagTaskHandlerForIos {
           "DB_THRESHOLD": DB_THRESHOLD,
           "MIC_DURATION": MIC_DURATION,
           "MAG_WINDOW_SUBLIST_SIZE": MAG_WINDOW_SUBLIST_SIZE,
+          "OVER_10_MEAN_THRESHOLD": OVER_10_MEAN_THRESHOLD,
           "DATETIME": DateTime.now().toIso8601String()
         }));
         mqttServerClient.publishMessage('hhi/$identifier/data/dominant_emf',

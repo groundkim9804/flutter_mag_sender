@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/Users/jisangkim/Sdks/flutter/flutter/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/jisangkim/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/jisangkim/Projects/flutter_mag_sender/android/app/.cxx/RelWithDebInfo/5b6m5ur2/x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/jisangkim/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/jisangkim/Projects/flutter_mag_sender/android/app/.cxx/RelWithDebInfo/5b6m5ur2/x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

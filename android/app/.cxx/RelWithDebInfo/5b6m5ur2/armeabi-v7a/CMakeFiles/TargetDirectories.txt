@@ -1,0 +1,2 @@
+/Users/jisangkim/Projects/flutter_mag_sender/android/app/.cxx/RelWithDebInfo/5b6m5ur2/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/jisangkim/Projects/flutter_mag_sender/android/app/.cxx/RelWithDebInfo/5b6m5ur2/armeabi-v7a/CMakeFiles/rebuild_cache.dir
