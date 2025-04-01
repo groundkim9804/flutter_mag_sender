@@ -306,10 +306,16 @@ class MagTaskHandlerForIos {
     soundDominantFrequency = -1;
     double soundDominantFrequencyMag = -1;
 
+    List<Map<String, double>> allUtralsonicInfo = [];
+
+    
+
     for (int i = 0; i < x.length ~/ 2; i++) {
       double frequency = (i * deltaFrequency);
       double magnitude = magnitudes[i].abs();
       double db = 20 * math.log(magnitude) / math.ln10;
+
+      allUtralsonicInfo.add({"FREQUENCY": frequency, "MAGNITUDE": magnitude, "DB": db});
 
       if (db > DB_THRESHOLD && frequency > FREQUENCY_THRESHOLD) {
         ultrasonicData
@@ -321,6 +327,11 @@ class MagTaskHandlerForIos {
         }
       }
     }
+
+    var allUSbuilder = MqttClientPayloadBuilder();
+    allUSbuilder.addString(jsonEncode(allUtralsonicInfo));
+    mqttServerClient.publishMessage('hhi/$identifier/data/all_us',
+        MqttQos.atMostOnce, allUSbuilder.payload!);
 
     ultrasonicData.sort((a, b) => a["FREQUENCY"]!.compareTo(b["FREQUENCY"]!));
     var builder = MqttClientPayloadBuilder();
@@ -335,6 +346,7 @@ class MagTaskHandlerForIos {
           MqttQos.atMostOnce, builder.payload!);
     }
     ultrasonicData.clear();
+    allUtralsonicInfo.clear();
   }
 
   Future<void> _startMic() async {
