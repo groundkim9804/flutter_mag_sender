@@ -45,6 +45,7 @@ class MagTaskHandlerForIos {
   double soundDominantFrequency = 0;
 
   int micStartedTime = -1;
+  int micRequestTime = -1;
 
   List<int> intervalMillisecondsList = [];
   Future<void> setIntervalMilliseconds() async {
@@ -168,9 +169,9 @@ class MagTaskHandlerForIos {
 
         if (over10Mean < OVER_10_MEAN_THRESHOLD) {
           if ((dominantMagnitude - over10Mean) > DOM_MAG_THRESHOLD) {
-            if ((19 < magDominantFrequency && magDominantFrequency < 21) ||
-                (39 < magDominantFrequency && magDominantFrequency < 41) ||
-                (59 < magDominantFrequency && magDominantFrequency < 61)) {
+            if ((18 <= magDominantFrequency && magDominantFrequency <= 22) ||
+                (38 <= magDominantFrequency && magDominantFrequency <= 42) ||
+                (58 <= magDominantFrequency && magDominantFrequency <= 62)) {
               final builderMicStart = MqttClientPayloadBuilder();
               builderMicStart.addString(jsonEncode({
                 "USER_ID": identifier,
@@ -281,6 +282,7 @@ class MagTaskHandlerForIos {
       builder.addString(jsonEncode({
         "USER_ID": identifier,
         "MIC_STARTED_TIME": micStartedTime,
+        "START_TIME_SUB_MIC_STARTED_TIME": micStartedTime - micRequestTime,
         "DATETIME": DateTime.now().toIso8601String()
       }));
       mqttServerClient.publishMessage('hhi/$identifier/data/mic_started',
@@ -336,6 +338,7 @@ class MagTaskHandlerForIos {
   }
 
   Future<void> _startMic() async {
+    micRequestTime = DateTime.now().millisecondsSinceEpoch;
     bool hasMicTurned = await _turnOnMic();
     if (hasMicTurned) {
       Timer(Duration(seconds: MIC_DURATION), () async {
