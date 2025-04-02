@@ -170,8 +170,7 @@ class MagTaskHandlerForIos {
         if (over10Mean < OVER_10_MEAN_THRESHOLD) {
           if ((dominantMagnitude - over10Mean) > DOM_MAG_THRESHOLD) {
             if ((18 <= magDominantFrequency && magDominantFrequency <= 22) ||
-                (38 <= magDominantFrequency && magDominantFrequency <= 42) ||
-                (58 <= magDominantFrequency && magDominantFrequency <= 62)) {
+                (38 <= magDominantFrequency && magDominantFrequency <= 42)) {
               final builderMicStart = MqttClientPayloadBuilder();
               builderMicStart.addString(jsonEncode({
                 "USER_ID": identifier,
@@ -313,7 +312,8 @@ class MagTaskHandlerForIos {
       double magnitude = magnitudes[i].abs();
       double db = 20 * math.log(magnitude) / math.ln10;
 
-      allUtralsonicInfo.add({"FREQUENCY": frequency, "MAGNITUDE": magnitude, "DB": db});
+      allUtralsonicInfo
+          .add({"FREQUENCY": frequency, "MAGNITUDE": magnitude, "DB": db});
 
       if (db > DB_THRESHOLD && frequency > FREQUENCY_THRESHOLD) {
         ultrasonicData
@@ -326,24 +326,17 @@ class MagTaskHandlerForIos {
       }
     }
 
-
     var allUSbuilder = MqttClientPayloadBuilder();
-    allUSbuilder.addString(jsonEncode(
-      {
-        "ALL_US": allUtralsonicInfo,
-        "DATETIME": DateTime.now().toIso8601String()
-      }
-    ));
+    allUSbuilder.addString(jsonEncode({
+      "ALL_US": allUtralsonicInfo,
+      "DATETIME": DateTime.now().toIso8601String()
+    }));
     mqttServerClient.publishMessage('hhi/$identifier/data/all_us',
         MqttQos.atMostOnce, allUSbuilder.payload!);
 
     var rawUSBuilder = MqttClientPayloadBuilder();
     rawUSBuilder.addString(jsonEncode(
-      {
-        "RAW_US": x,
-        "DATETIME": DateTime.now().toIso8601String()
-      }
-    ));
+        {"RAW_US": x, "DATETIME": DateTime.now().toIso8601String()}));
     mqttServerClient.publishMessage('hhi/$identifier/data/raw_us',
         MqttQos.atMostOnce, rawUSBuilder.payload!);
 
