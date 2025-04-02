@@ -308,8 +308,6 @@ class MagTaskHandlerForIos {
 
     List<Map<String, double>> allUtralsonicInfo = [];
 
-    
-
     for (int i = 0; i < x.length ~/ 2; i++) {
       double frequency = (i * deltaFrequency);
       double magnitude = magnitudes[i].abs();
@@ -328,10 +326,26 @@ class MagTaskHandlerForIos {
       }
     }
 
+
     var allUSbuilder = MqttClientPayloadBuilder();
-    allUSbuilder.addString(jsonEncode(allUtralsonicInfo));
+    allUSbuilder.addString(jsonEncode(
+      {
+        "ALL_US": allUtralsonicInfo,
+        "DATETIME": DateTime.now().toIso8601String()
+      }
+    ));
     mqttServerClient.publishMessage('hhi/$identifier/data/all_us',
         MqttQos.atMostOnce, allUSbuilder.payload!);
+
+    var rawUSBuilder = MqttClientPayloadBuilder();
+    rawUSBuilder.addString(jsonEncode(
+      {
+        "RAW_US": x,
+        "DATETIME": DateTime.now().toIso8601String()
+      }
+    ));
+    mqttServerClient.publishMessage('hhi/$identifier/data/raw_us',
+        MqttQos.atMostOnce, rawUSBuilder.payload!);
 
     ultrasonicData.sort((a, b) => a["FREQUENCY"]!.compareTo(b["FREQUENCY"]!));
     var builder = MqttClientPayloadBuilder();
