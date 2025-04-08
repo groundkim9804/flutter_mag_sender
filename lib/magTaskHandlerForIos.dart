@@ -47,6 +47,8 @@ class MagTaskHandlerForIos {
   int micStartedTime = -1;
   int micRequestTime = -1;
 
+  bool ALWAYS_ON_MIC = false;
+
   List<int> intervalMillisecondsList = [];
   Future<void> setIntervalMilliseconds() async {
     int startTime = DateTime.now().millisecondsSinceEpoch;
@@ -120,6 +122,16 @@ class MagTaskHandlerForIos {
       if (topicName == 'hhi/settings/over_10_mean_threshold') {
         OVER_10_MEAN_THRESHOLD = jMessage['OVER_10_MEAN_THRESHOLD'];
       }
+
+      if (topicName == 'hhi/settings/always_on_mic') {
+        ALWAYS_ON_MIC = jMessage['ALWAYS_ON_MIC'];
+
+        if (ALWAYS_ON_MIC) {
+          _turnOnMic();
+        } else {
+          _turnOffMic();
+        }
+      }
     });
 
     List<double> mags = [];
@@ -164,13 +176,16 @@ class MagTaskHandlerForIos {
 
         frequencyMagnitudeStreamController.add(frequencyMagnitudeList);
 
+        var validate60 = (58 <= magDominantFrequency && magDominantFrequency <= 62);
+        var validate40 = (18 <= magDominantFrequency && magDominantFrequency <= 22) ||
+            (38 <= magDominantFrequency && magDominantFrequency <= 42);
+
         // validate
         var over10Mean = mags.mean;
 
         if (over10Mean < OVER_10_MEAN_THRESHOLD) {
           if ((dominantMagnitude - over10Mean) > DOM_MAG_THRESHOLD) {
-            if ((18 <= magDominantFrequency && magDominantFrequency <= 22) ||
-                (38 <= magDominantFrequency && magDominantFrequency <= 42)) {
+            if (validate60) {
               final builderMicStart = MqttClientPayloadBuilder();
               builderMicStart.addString(jsonEncode({
                 "USER_ID": identifier,
@@ -266,6 +281,10 @@ class MagTaskHandlerForIos {
   }
 
   Future<void> _turnOffMic() async {
+    if (soundSubscription == null) {
+      return;
+    }
+
     await soundSubscription!.cancel();
     soundSubscription = null;
     soundStream = null;
@@ -312,8 +331,7 @@ class MagTaskHandlerForIos {
       double magnitude = magnitudes[i].abs();
       double db = 20 * math.log(magnitude) / math.ln10;
 
-      allUtralsonicInfo
-          .add({"FREQUENCY": frequency, "MAGNITUDE": magnitude, "DB": db});
+      allUtralsonicInfo.add({"FREQUENCY": frequency, "MAGNITUDE": magnitude, "DB": db});
 
       if (db > DB_THRESHOLD && frequency > FREQUENCY_THRESHOLD) {
         ultrasonicData
@@ -326,17 +344,24 @@ class MagTaskHandlerForIos {
       }
     }
 
+
     var allUSbuilder = MqttClientPayloadBuilder();
-    allUSbuilder.addString(jsonEncode({
-      "ALL_US": allUtralsonicInfo,
-      "DATETIME": DateTime.now().toIso8601String()
-    }));
+    allUSbuilder.addString(jsonEncode(
+      {
+        "ALL_US": allUtralsonicInfo,
+        "DATETIME": DateTime.now().toIso8601String()
+      }
+    ));
     mqttServerClient.publishMessage('hhi/$identifier/data/all_us',
         MqttQos.atMostOnce, allUSbuilder.payload!);
 
     var rawUSBuilder = MqttClientPayloadBuilder();
     rawUSBuilder.addString(jsonEncode(
-        {"RAW_US": x, "DATETIME": DateTime.now().toIso8601String()}));
+      {
+        "RAW_US": x,
+        "DATETIME": DateTime.now().toIso8601String()
+      }
+    ));
     mqttServerClient.publishMessage('hhi/$identifier/data/raw_us',
         MqttQos.atMostOnce, rawUSBuilder.payload!);
 
@@ -361,7 +386,9 @@ class MagTaskHandlerForIos {
     bool hasMicTurned = await _turnOnMic();
     if (hasMicTurned) {
       Timer(Duration(seconds: MIC_DURATION), () async {
-        await _turnOffMic();
+        if (!ALWAYS_ON_MIC) {
+          await _turnOffMic();
+        }
       });
     }
   }
