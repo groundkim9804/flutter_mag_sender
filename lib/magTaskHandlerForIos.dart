@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ffi';
 
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:uuid/uuid.dart';
@@ -48,6 +47,8 @@ class MagTaskHandlerForIos {
   int micRequestTime = -1;
 
   bool ALWAYS_ON_MIC = false;
+
+  int validateFrequency = -1;
 
   List<int> intervalMillisecondsList = [];
   Future<void> setIntervalMilliseconds() async {
@@ -132,6 +133,18 @@ class MagTaskHandlerForIos {
           _turnOffMic();
         }
       }
+
+      if (topicName == 'hhi/settings/validate_frequency') {
+        int? targetId = jMessage['TARGET_ID'];
+
+        if (targetId == null) {
+          validateFrequency = jMessage['VALIDATE_FREQUENCY'];
+        } else {
+          if (targetId == identifier) {
+            validateFrequency = jMessage['VALIDATE_FREQUENCY'];
+          }
+        }
+      }
     });
 
     List<double> mags = [];
@@ -180,12 +193,24 @@ class MagTaskHandlerForIos {
         var validate40 = (18 <= magDominantFrequency && magDominantFrequency <= 22) ||
             (38 <= magDominantFrequency && magDominantFrequency <= 42);
 
+        bool validateTarget = false;
+
+        if (intervalMilliseconds == 8) {
+          validateTarget = validate60;
+        } else if (intervalMilliseconds == 10) {
+          validateTarget = validate40;
+        }
+
+        if (validateFrequency != -1) {
+          validateTarget = (validateFrequency - 2 <= magDominantFrequency && magDominantFrequency <= validateFrequency + 2);
+        }
+
         // validate
         var over10Mean = mags.mean;
 
         if (over10Mean < OVER_10_MEAN_THRESHOLD) {
           if ((dominantMagnitude - over10Mean) > DOM_MAG_THRESHOLD) {
-            if (validate60) {
+            if (validateTarget) {
               final builderMicStart = MqttClientPayloadBuilder();
               builderMicStart.addString(jsonEncode({
                 "USER_ID": identifier,
