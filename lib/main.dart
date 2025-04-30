@@ -160,7 +160,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   minX: 5,
                   maxX: 80,
                   minY: 0,
-                  maxY: 100,
+                  maxY: spots.isNotEmpty &&
+                          spots.map((e) => e.y).reduce((a, b) => max(a, b)) >
+                              100
+                      ? 1000
+                      : 100,
                   lineBarsData: [
                     LineChartBarData(
                       spots: spots,

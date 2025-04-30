@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:uuid/uuid.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
@@ -48,7 +50,15 @@ class MagTaskHandlerForIos {
 
   bool ALWAYS_ON_MIC = false;
 
+  bool is_record_sound = false;
+
   int validateFrequency = -1;
+
+  List<String> soundBuffers = [];
+
+  bool hasMicTurned = false;
+
+  String fileName = '';
 
   List<int> intervalMillisecondsList = [];
   Future<void> setIntervalMilliseconds() async {
@@ -144,6 +154,34 @@ class MagTaskHandlerForIos {
             validateFrequency = jMessage['VALIDATE_FREQUENCY'];
           }
         }
+      }
+
+      if (topicName == 'hhi/settings/record_sound') {
+        String action = jMessage['ACTION'];
+
+        if (action == 'start') {
+          soundBuffers = [];
+          is_record_sound = true;
+        } else if (action == 'stop') {
+          is_record_sound = false;
+
+          String fileName = jMessage['FILE_NAME'];
+          
+          String csvHeader = "RAW_US,DATETIME";
+          final dio = Dio();
+          // send as text
+          // with text/plain
+          dio.post('http://legend.flexing.ai:8080/sound_buffer?file_name=$fileName&id=$identifier', data: 
+            '$csvHeader\n${soundBuffers.join('\n')}',
+            options: Options(headers: {
+              'Content-Type': 'text/plain',
+            }));
+          soundBuffers.clear();
+        }
+      }
+
+      if (topicName == 'hhi/settings/file_name') {
+        fileName = jMessage['FILE_NAME'];
       }
     });
 
@@ -293,6 +331,8 @@ class MagTaskHandlerForIos {
       return false;
     }
 
+    soundBuffers = [];
+
     soundStream = MicStream.microphone(
       audioSource: AudioSource.DEFAULT,
       sampleRate: SOUND_SAMPLE_RATE,
@@ -302,6 +342,7 @@ class MagTaskHandlerForIos {
 
     soundSubscription = soundStream!.listen(_micListener);
     SOUND_SAMPLE_RATE = await MicStream.sampleRate;
+    print('SOUND_SAMPLE_RATE: $SOUND_SAMPLE_RATE');
     return true;
   }
 
@@ -309,6 +350,17 @@ class MagTaskHandlerForIos {
     if (soundSubscription == null) {
       return;
     }
+
+    String csvHeader = "RAW_US,DATETIME";
+    final dio = Dio();
+    // send as text
+    // with text/plain
+          dio.post('http://legend.flexing.ai:8080/sound_buffer?file_name=$fileName&id=$identifier', data: 
+            '$csvHeader\n${soundBuffers.join('\n')}',
+            options: Options(headers: {
+              'Content-Type': 'text/plain',
+            }));
+          soundBuffers.clear();
 
     await soundSubscription!.cancel();
     soundSubscription = null;
@@ -331,12 +383,18 @@ class MagTaskHandlerForIos {
       mqttServerClient.publishMessage('hhi/$identifier/data/mic_started',
           MqttQos.atMostOnce, builder.payload!);
     }
+    
     final x = List<double>.filled(samples.length ~/ 2, 0);
     for (int i = 0; i < x.length; i++) {
       int sampleValue =
           (samples[i * 2] & 0xFF) | ((samples[i * 2 + 1] & 0xFF) << 8);
       if (sampleValue >= 32768) sampleValue -= 65536;
       x[i] = sampleValue.toDouble();
+    }
+
+    if (hasMicTurned) {
+      String buffer = '"[${x.map((e) => e.toString()).join(',')}]",${DateTime.now().toIso8601String()}';
+      soundBuffers.add(buffer);
     }
 
     final fft = FFT(x.length);

@@ -1,2 +1,2 @@
-const String MQTT_SERVER = "hhi-poc.flexing.ai";
-const int MQTT_PORT = 1883;
+const String MQTT_SERVER = "legend.flexing.ai";
+const int MQTT_PORT = 62547;
