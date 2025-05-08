@@ -52,11 +52,11 @@ class MagTaskHandlerForIos {
 
   bool is_record_sound = false;
 
+  bool is_mic_on = false;
+
   int validateFrequency = -1;
 
   List<String> soundBuffers = [];
-
-  bool hasMicTurned = false;
 
   String fileName = '';
 
@@ -160,7 +160,7 @@ class MagTaskHandlerForIos {
         String action = jMessage['ACTION'];
 
         if (action == 'start') {
-          soundBuffers = [];
+          soundBuffers.clear();
           is_record_sound = true;
         } else if (action == 'stop') {
           is_record_sound = false;
@@ -331,8 +331,6 @@ class MagTaskHandlerForIos {
       return false;
     }
 
-    soundBuffers = [];
-
     soundStream = MicStream.microphone(
       audioSource: AudioSource.DEFAULT,
       sampleRate: SOUND_SAMPLE_RATE,
@@ -340,9 +338,11 @@ class MagTaskHandlerForIos {
       audioFormat: AudioFormat.ENCODING_PCM_16BIT,
     );
 
+    is_mic_on = true;
+    soundBuffers = [];
     soundSubscription = soundStream!.listen(_micListener);
     SOUND_SAMPLE_RATE = await MicStream.sampleRate;
-    print('SOUND_SAMPLE_RATE: $SOUND_SAMPLE_RATE');
+
     return true;
   }
 
@@ -353,14 +353,13 @@ class MagTaskHandlerForIos {
 
     String csvHeader = "RAW_US,DATETIME";
     final dio = Dio();
-    // send as text
-    // with text/plain
-          dio.post('http://legend.flexing.ai:8080/sound_buffer?file_name=$fileName&id=$identifier', data: 
-            '$csvHeader\n${soundBuffers.join('\n')}',
-            options: Options(headers: {
-              'Content-Type': 'text/plain',
-            }));
-          soundBuffers.clear();
+    dio.post('http://legend.flexing.ai:8080/sound_buffer?file_name=$fileName&id=$identifier', data:
+      '$csvHeader\n${soundBuffers.join('\n')}',
+      options: Options(headers: {
+        'Content-Type': 'text/plain',
+      }));
+    is_mic_on = false;
+    soundBuffers.clear();
 
     await soundSubscription!.cancel();
     soundSubscription = null;
@@ -392,7 +391,7 @@ class MagTaskHandlerForIos {
       x[i] = sampleValue.toDouble();
     }
 
-    if (hasMicTurned) {
+    if (is_mic_on) {
       String buffer = '"[${x.map((e) => e.toString()).join(',')}]",${DateTime.now().toIso8601String()}';
       soundBuffers.add(buffer);
     }
@@ -467,6 +466,7 @@ class MagTaskHandlerForIos {
   Future<void> _startMic() async {
     micRequestTime = DateTime.now().millisecondsSinceEpoch;
     bool hasMicTurned = await _turnOnMic();
+
     if (hasMicTurned) {
       Timer(Duration(seconds: MIC_DURATION), () async {
         if (!ALWAYS_ON_MIC) {
