@@ -51,7 +51,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  double currentEMF = 0;
+  String currentEMF = '0';
   double magDominantFrequency = 0;
   double magDominantMagnitude = 0;
   double soundDominantFrequency = 0;
@@ -59,6 +59,8 @@ class _MyHomePageState extends State<MyHomePage> {
   List<double> emfList = [];
   List<FlSpot> spots = [];
   List<double> over50Mag = [];
+
+  double anyMag = 0;
 
   bool isMagOn = false;
   bool isMicOn = false;
@@ -153,6 +155,7 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(
                 'Sound Dominant Frequency: ${soundDominantFrequency.toStringAsFixed(2)}'),
             Text('Interval Milliseconds: $intervalMilliseconds'),
+            Text("EMF: ${currentEMF}"),
             SizedBox(
               height: 500,
               child: LineChart(
@@ -299,18 +302,25 @@ class _MyHomePageState extends State<MyHomePage> {
         magDominantMagnitude = response['data']['mag_dominant_magnitude'];
         soundDominantFrequency = response['data']['sound_dominant_frequency'];
         intervalMilliseconds = response['data']['interval_milliseconds'];
+        currentEMF = response['data']['emf'];
         setState(() {});
       });
 
       magTaskHandlerForIos.frequencyMagnitudeStreamController.stream
           .listen((data) {
-        setState(() {
-          // only 5 ~ 80
-          spots = data
-              .map((e) => FlSpot(e.keys.first, e.values.first))
+            setState(() {
+              anyMag = data[0].values.first;
+            });
+
+        if (identifier > 10) {
+          setState(() {
+            // only 5 ~ 80
+            spots = data
+                .map((e) => FlSpot(e.keys.first, e.values.first))
               .where((e) => e.x >= 5 && e.x <= 80)
               .toList();
         });
+        }
       });
     });
   }

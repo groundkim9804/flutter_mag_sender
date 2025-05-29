@@ -14,7 +14,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:statistics/statistics.dart';
 import 'package:mic_stream/mic_stream.dart';
-
+import 'audioRecorder.dart';
 class MagTaskHandlerForIos {
   int identifier = -1;
 
@@ -90,6 +90,7 @@ class MagTaskHandlerForIos {
     await mqttServerClient.connect();
 
     mqttServerClient.subscribe('hhi/settings/#', MqttQos.atMostOnce);
+    mqttServerClient.subscribe('hhi/record/#', MqttQos.atMostOnce);
     // on message
     mqttServerClient.updates!
         .listen((List<MqttReceivedMessage<MqttMessage>> c) {
@@ -182,6 +183,19 @@ class MagTaskHandlerForIos {
 
       if (topicName == 'hhi/settings/file_name') {
         fileName = jMessage['FILE_NAME'];
+      }
+
+      if (topicName == 'hhi/record/wav') {
+        String action = jMessage['ACTION'];
+
+        print(action);
+
+        if (action == 'start') {
+          String fn = jMessage['FILE_NAME'];
+          AudioRecorder.recordAudio(fn);
+        } else if (action == 'stop') {
+          AudioRecorder.stopAudio();
+        }
       }
     });
 
@@ -292,6 +306,7 @@ class MagTaskHandlerForIos {
             'mic_status': soundSubscription != null ? 'on' : 'off',
             'sound_dominant_frequency': soundDominantFrequency,
             'interval_milliseconds': intervalMilliseconds,
+            'emf': emf.toStringAsFixed(2),
           }
         }));
 
@@ -327,46 +342,52 @@ class MagTaskHandlerForIos {
   int DB_THRESHOLD = 100;
   int FREQUENCY_THRESHOLD = 17000;
   Future<bool> _turnOnMic() async {
-    if (soundSubscription != null) {
+    if (await AudioRecorder.recorder.isRecording()) {
       return false;
     }
+    await AudioRecorder.recordAudio('id${identifier}_$fileName');
+    // if (soundSubscription != null) {
+    //   return false;
+    // }
+  
+    // soundStream = MicStream.microphone(
+    //   audioSource: AudioSource.DEFAULT,
+    //   sampleRate: SOUND_SAMPLE_RATE,
+    //   channelConfig: ChannelConfig.CHANNEL_IN_MONO,
+    //   audioFormat: AudioFormat.ENCODING_PCM_16BIT,
+    // );
 
-    soundStream = MicStream.microphone(
-      audioSource: AudioSource.DEFAULT,
-      sampleRate: SOUND_SAMPLE_RATE,
-      channelConfig: ChannelConfig.CHANNEL_IN_MONO,
-      audioFormat: AudioFormat.ENCODING_PCM_16BIT,
-    );
-
-    is_mic_on = true;
-    soundBuffers = [];
-    soundSubscription = soundStream!.listen(_micListener);
-    SOUND_SAMPLE_RATE = await MicStream.sampleRate;
+    // is_mic_on = true;
+    // soundBuffers = [];
+    
+    // soundSubscription = soundStream!.listen(_micListener);
+    // SOUND_SAMPLE_RATE = await MicStream.sampleRate;
 
     return true;
   }
 
   Future<void> _turnOffMic() async {
-    if (soundSubscription == null) {
-      return;
-    }
+    await AudioRecorder.stopAudio();
+    // if (soundSubscription == null) {
+    //   return;
+    // }
 
-    String csvHeader = "RAW_US,DATETIME";
-    final dio = Dio();
-    dio.post('http://legend.flexing.ai:8080/sound_buffer?file_name=$fileName&id=$identifier', data:
-      '$csvHeader\n${soundBuffers.join('\n')}',
-      options: Options(headers: {
-        'Content-Type': 'text/plain',
-      }));
-    is_mic_on = false;
-    soundBuffers.clear();
+    // String csvHeader = "RAW_US,DATETIME";
+    // final dio = Dio();
+    // dio.post('http://legend.flexing.ai:8080/sound_buffer?file_name=$fileName&id=$identifier', data:
+    //   '$csvHeader\n${soundBuffers.join('\n')}',
+    //   options: Options(headers: {
+    //     'Content-Type': 'text/plain',
+    //   }));
+    // is_mic_on = false;
+    // soundBuffers.clear();
 
-    await soundSubscription!.cancel();
-    soundSubscription = null;
-    soundStream = null;
+    // await soundSubscription!.cancel();
+    // soundSubscription = null;
+    // soundStream = null;
 
-    soundDominantFrequency = -1;
-    micStartedTime = -1;
+    // soundDominantFrequency = -1;
+    // micStartedTime = -1;
   }
 
   void _micListener(Uint8List samples) {
@@ -464,6 +485,8 @@ class MagTaskHandlerForIos {
   }
 
   Future<void> _startMic() async {
+    return; 
+
     micRequestTime = DateTime.now().millisecondsSinceEpoch;
     bool hasMicTurned = await _turnOnMic();
 
